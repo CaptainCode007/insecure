@@ -2,6 +2,7 @@ provider "aws" {
   region = var.region
 }
 
+
 resource "aws_security_group" "sg" {
   name        = "allow_ssh_db"
   description = "Allow SSH and DB traffic"
@@ -106,12 +107,20 @@ resource "aws_subnet" "private1" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private1_cidr_block
   availability_zone = var.availability_zone_az1
+  tags = {
+    "kubernetes.io/cluster/wiz-demo" = 1
+    
+  }
 }
 
 resource "aws_subnet" "private2" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private2_cidr_block
   availability_zone = var.availability_zone_az2
+  tags = {
+    "kubernetes.io/cluster/wiz-demo" = 1
+    
+  }
 }
 resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
@@ -122,6 +131,31 @@ resource "aws_s3_bucket" "bucket" {
   bucket = "my-bucket-mrunal"
   acl    = "private"
 
+}
+
+
+resource "aws_eip" "nat" {
+  vpc = true
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public.id
+  depends_on    = [aws_internet_gateway.gw]
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  subnet_id      = aws_subnet.private1.id
+  route_table_id = aws_route_table.private.id
 }
 
 resource "aws_instance" "instance" {
@@ -170,96 +204,152 @@ gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc" | sudo tee /etc/yum.re
   }
 }
 
-resource "aws_iam_role" "cluster" {
-  name = "my-cluster-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
-      },
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "cluster" {
-  role       = aws_iam_role.cluster.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "cluster_vpc" {
-  role       = aws_iam_role.cluster.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
-}
-
-resource "aws_eks_cluster" "cluster" {
-  name     = "my-cluster"
-  role_arn = aws_iam_role.cluster.arn
-
-  vpc_config {
-    subnet_ids = [aws_subnet.private1.id, aws_subnet.private2.id]
-  }
-
-  version = "1.29"
-
-  depends_on = [
-    aws_iam_role_policy_attachment.cluster,
-    aws_iam_role_policy_attachment.cluster_vpc,
-  ]
-}
-
-resource "aws_iam_role" "fargate_pod" {
-  name = "my-fargate-pod-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "eks-fargate-pods.amazonaws.com"
-        }
-      },
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "fargate_pod" {
-  role       = aws_iam_role.fargate_pod.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy"
-}
-
-resource "aws_eks_fargate_profile" "default" {
-  cluster_name          = aws_eks_cluster.cluster.name
-  fargate_profile_name  = "default"
-  pod_execution_role_arn = aws_iam_role.fargate_pod.arn
-
-    subnet_ids = [aws_subnet.private1.id, aws_subnet.private2.id]
-
-  selector {
-    namespace = "default"
-  }
-
-  depends_on = [
-    aws_eks_cluster.cluster,
-    aws_iam_role_policy_attachment.fargate_pod,
-  ]
-}
-
 resource "aws_ecr_repository" "repository" {
   name = "wiz-image"  
   image_tag_mutability = "IMMUTABLE"
 }
 
 
+resource "aws_iam_role" "eks-cluster" {
+  name = "eks-cluster-${var.cluster_name}"
+
+  assume_role_policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "eks.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+POLICY
+}
+
+resource "aws_iam_role_policy_attachment" "amazon-eks-cluster-policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.eks-cluster.name
+}
+
+resource "aws_iam_policy" "ecr_policy" {
+  name        = "ecr_policy"
+  description = "Allows ECR access"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:GetRepositoryPolicy",
+        "ecr:DescribeRepositories",
+        "ecr:ListImages",
+        "ecr:DescribeImages",
+        "ecr:BatchGetImage",
+        "ecr:GetLifecyclePolicy",
+        "ecr:GetLifecyclePolicyPreview",
+        "ecr:ListTagsForResource",
+        "ecr:DescribeImageScanFindings"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_policy_attachment" {
+  role       = aws_iam_role.eks_role.name
+  policy_arn = aws_iam_policy.ecr_policy.arn
+}
+
+resource "aws_iam_role" "eks_role" {
+  name = "eks-role"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "eks.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
 
 
+
+resource "aws_eks_cluster" "cluster" {
+  name     = var.cluster_name
+  version  = var.cluster_version
+  role_arn = aws_iam_role.eks-cluster.arn
+
+  vpc_config {
+
+    endpoint_private_access = false
+    endpoint_public_access  = true
+    public_access_cidrs     = ["0.0.0.0/0"]
+
+    subnet_ids = [
+      aws_subnet.private1.id,
+      aws_subnet.private2.id
+  ]
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.amazon-eks-cluster-policy]
+}
+
+resource "aws_iam_role" "eks-fargate-profile" {
+  name = "eks-fargate-profile"
+
+  assume_role_policy = jsonencode({
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "eks-fargate-pods.amazonaws.com"
+      }
+    }]
+    Version = "2012-10-17"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_read_only" {
+  role       = aws_iam_role.eks-fargate-profile.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_role_policy_attachment" "eks-fargate-profile" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy"
+  role       = aws_iam_role.eks-fargate-profile.name
+}
+
+resource "aws_eks_fargate_profile" "staging" {
+  cluster_name           = aws_eks_cluster.cluster.name
+  fargate_profile_name   = "staging"
+  pod_execution_role_arn = aws_iam_role.eks-fargate-profile.arn
+
+  
+  subnet_ids = [
+     aws_subnet.private1.id,
+      aws_subnet.private2.id
+  ]
+
+  selector {
+    namespace = "staging"
+  }
+}
 
 
 

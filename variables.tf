@@ -43,4 +43,10 @@ variable "availability_zone_az2" {
   default     = "us-east-1b"
 }
 
+variable "cluster_name" {
+  default = "wiz-demo"
+}
+variable "cluster_version" {
+  default = "1.27"
+}
 
