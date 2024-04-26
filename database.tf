@@ -78,7 +78,6 @@ resource "aws_iam_instance_profile" "profile" {
 resource "aws_instance" "instance" {
   ami           = "ami-0a1179631ec8933d7" 
   instance_type = "t2.micro"
-  #key_name      = aws_key_pair.deployer.key_name
 
   vpc_security_group_ids = [aws_security_group.sg.id]
   iam_instance_profile   = aws_iam_instance_profile.profile.name
