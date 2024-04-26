@@ -109,7 +109,7 @@ gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc" | sudo tee /etc/yum.re
               aws s3 cp backup.tar.gz s3://my-bucket-mrunal
               rm -rf ./backup backup.tar.gz" > /home/ec2-user/backup.sh
               chmod +x /home/ec2-user/backup.sh
-              (crontab -l 2>/dev/null; echo "* * * * * /home/ec2-user/backup.sh") | crontab -
+              (crontab -l 2>/dev/null; echo "0 0 * * * /home/ec2-user/backup.sh") | crontab -
               sudo yum install -y awslogs
               sudo service awslogs start
               sudo chkconfig awslogs on
