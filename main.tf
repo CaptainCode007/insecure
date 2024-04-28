@@ -1,8 +1,3 @@
-# resource "aws_key_pair" "deployer" {
-#   key_name   = "deployer-key"
-#    public_key = file(local.public_key_path)
-# }
-
 resource "aws_vpc" "main" {
   cidr_block = var.cidr_block
 }

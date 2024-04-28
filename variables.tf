@@ -4,9 +4,6 @@ variable "region" {
   default     = "us-east-1"
 }
 
-locals {
-  public_key_path = "${path.module}/mykeypair.pub"
-}
 
 variable "cidr_block" {
   description = "The CIDR block for the VPC"
