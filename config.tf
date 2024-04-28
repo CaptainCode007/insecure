@@ -9,7 +9,7 @@ resource "aws_config_configuration_recorder" "recorder" {
   }
 }
 
-resource "aws_iam_role" "role" {
+resource "aws_iam_role" "config-role" {
   name = "awsconfig"
   assume_role_policy = <<POLICY
 {
@@ -30,12 +30,12 @@ POLICY
 
 resource "aws_config_delivery_channel" "channel" {
   name           = "default"
-  s3_bucket_name = aws_s3_bucket.bucket.bucket
+  s3_bucket_name = aws_s3_bucket.config_bucket.bucket
   s3_key_prefix  = "config"
   sns_topic_arn  = aws_sns_topic.topic.arn
 }
 
-resource "aws_s3_bucket" "bucket" {
+resource "aws_s3_bucket" "config_bucket" {
   bucket = "mrunal-aws-config" 
 }
 
