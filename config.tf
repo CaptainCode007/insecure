@@ -9,7 +9,7 @@ resource "aws_config_configuration_recorder" "recorder" {
   }
 }
 
-resource "aws_iam_role" "config-role" {
+resource "aws_iam_role" "config_role" {
   name = "awsconfig"
   assume_role_policy = <<POLICY
 {
@@ -27,6 +27,42 @@ resource "aws_iam_role" "config-role" {
 }
 POLICY
 }
+
+resource "aws_iam_role_policy" "config_role" {
+  name = "config_policy"
+  role = aws_iam_role.role.id
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetBucketAcl",
+        "s3:PutBucketAcl"
+      ],
+      "Resource": "arn:aws:s3:::mrunal-aws-config/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "logs:CreateLogGroup",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:*"
+    }
+  ]
+}
+EOF
+}
+
 
 resource "aws_config_delivery_channel" "channel" {
   name           = "default"
