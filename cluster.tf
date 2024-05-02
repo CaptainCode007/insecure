@@ -1,3 +1,8 @@
+/*
+  This resource block defines an AWS IAM role for an EKS cluster.
+  The role is used to grant permissions to the EKS service to assume the role.
+*/
+
 resource "aws_iam_role" "eks-cluster" {
   name = "eks-cluster-${var.cluster_name}"
 
@@ -16,6 +21,13 @@ resource "aws_iam_role" "eks-cluster" {
 }
 POLICY
 }
+
+/*
+  This Terraform code creates an AWS EKS cluster with associated IAM roles and policies.
+  It also creates an ECR policy and attaches it to the EKS cluster role.
+  Additionally, it creates an IAM role and policy for EKS Fargate profiles.
+  Finally, it creates an EKS Fargate profile for the "staging" namespace.
+*/
 
 resource "aws_iam_role_policy_attachment" "amazon-eks-cluster-policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
@@ -76,15 +88,12 @@ resource "aws_iam_role" "eks_role" {
 EOF
 }
 
-
-
 resource "aws_eks_cluster" "cluster" {
   name     = var.cluster_name
   version  = var.cluster_version
   role_arn = aws_iam_role.eks-cluster.arn
 
   vpc_config {
-
     endpoint_private_access = false
     endpoint_public_access  = true
     public_access_cidrs     = ["0.0.0.0/0"]
@@ -92,7 +101,7 @@ resource "aws_eks_cluster" "cluster" {
     subnet_ids = [
       aws_subnet.private1.id,
       aws_subnet.private2.id
-  ]
+    ]
   }
 
   depends_on = [aws_iam_role_policy_attachment.amazon-eks-cluster-policy]
@@ -128,16 +137,12 @@ resource "aws_eks_fargate_profile" "staging" {
   fargate_profile_name   = "staging"
   pod_execution_role_arn = aws_iam_role.eks-fargate-profile.arn
 
-  
   subnet_ids = [
-     aws_subnet.private1.id,
-      aws_subnet.private2.id
+    aws_subnet.private1.id,
+    aws_subnet.private2.id
   ]
 
   selector {
     namespace = "staging"
   }
 }
-
-
-
