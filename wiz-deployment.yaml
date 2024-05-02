@@ -1,0 +1,39 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tasky
+  namespace: staging
+spec:
+  selector:
+    matchLabels:
+      run: tasky
+  
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        run: tasky
+    spec:
+      containers:
+      - name: tasky
+        image: 211125485503.dkr.ecr.us-east-1.amazonaws.com/wiz-image
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MONGODB_URI
+          value: "mongodb://myUser:myPassword@54.197.29.209:27017/myDatabase"
+        - name: SECRET_KEY
+          value: "secret123"
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
