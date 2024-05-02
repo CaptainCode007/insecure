@@ -1,5 +1,12 @@
+# This Terraform code creates an AWS S3 bucket, configures public access settings, and applies a bucket policy.
+# The bucket name is specified as "my-bucket-mrunal" and can be replaced with a desired bucket name.
+# The "aws_s3_bucket" resource creates the S3 bucket.
+# The "aws_s3_bucket_public_access_block" resource configures public access settings for the bucket.
+# The "aws_s3_bucket_policy" resource applies a bucket policy that allows public read access to objects in the bucket.
+# The bucket policy allows the "s3:GetObject" action for all principals ("*") on objects within the bucket.
+
 resource "aws_s3_bucket" "bucket" {
-  bucket = "my-bucket-mrunal" # replace with your bucket name
+  bucket = "my-bucket-mrunal" 
 }
 
 resource "aws_s3_bucket_public_access_block" "access_block" {

@@ -1,3 +1,4 @@
+# Create an AWS security group to allow SSH and DB traffic
 resource "aws_security_group" "sg" {
   name        = "allow_ssh_db"
   description = "Allow SSH and DB traffic"
@@ -25,7 +26,7 @@ resource "aws_security_group" "sg" {
   }
 }
 
-
+# Create an AWS IAM role for EC2 instances
 resource "aws_iam_role" "role" {
   name = "ec2_role"
 
@@ -46,7 +47,7 @@ resource "aws_iam_role" "role" {
 EOF
 }
 
-
+# Attach a policy to the IAM role
 resource "aws_iam_role_policy" "policy" {
   name = "ec2_policy"
   role = aws_iam_role.role.id
@@ -68,20 +69,20 @@ resource "aws_iam_role_policy" "policy" {
 EOF
 }
 
-
+# Create an IAM instance profile and associate it with the IAM role
 resource "aws_iam_instance_profile" "profile" {
   name = "ec2_profile"
   role = aws_iam_role.role.name
 }
 
-
+# Create an AWS EC2 instance
 resource "aws_instance" "instance" {
   ami           = "ami-0a1179631ec8933d7" 
   instance_type = "t2.micro"
 
-  vpc_security_group_ids = [aws_security_group.sg.id]
-  iam_instance_profile   = aws_iam_instance_profile.profile.name
-  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids      = [aws_security_group.sg.id]
+  iam_instance_profile        = aws_iam_instance_profile.profile.name
+  subnet_id                   = aws_subnet.public.id
   associate_public_ip_address = true
 
   user_data = file("${path.module}/database-setup.sh")

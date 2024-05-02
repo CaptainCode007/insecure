@@ -1,3 +1,7 @@
+# This Terraform file defines the networking resources for an AWS VPC.
+# It creates a VPC, public and private subnets, an internet gateway, a NAT gateway,
+# and associates the appropriate route tables.
+
 resource "aws_vpc" "main" {
   cidr_block = var.cidr_block
   enable_dns_support   = true
@@ -28,7 +32,6 @@ resource "aws_subnet" "private1" {
   availability_zone = var.availability_zone_az1
   tags = {
     "kubernetes.io/cluster/wiz-demo" = 1
-    
   }
 }
 
@@ -38,9 +41,9 @@ resource "aws_subnet" "private2" {
   availability_zone = var.availability_zone_az2
   tags = {
     "kubernetes.io/cluster/wiz-demo" = 1
-    
   }
 }
+
 resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
@@ -69,5 +72,3 @@ resource "aws_route_table_association" "private" {
   subnet_id      = aws_subnet.private1.id
   route_table_id = aws_route_table.private.id
 }
-
-
