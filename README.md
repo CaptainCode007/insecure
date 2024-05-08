@@ -1,7 +1,6 @@
 This repo gives a sample terraform on how to build insecure infrastructure for deploying and pen testing on your cloud. 
 
-
-Database Server Configuration
+**Database Server Configuration**
 Create a Linux EC2 instance on which a database server is installed (e.g. MongoDB)
 Configure the database with authentication so you can build a database connection string
 Allow DB traffic to originate only from your VPC
